@@ -1,0 +1,19 @@
+# Read about fixtures at http://ar.rubyonrails.org/classes/Fixtures.html
+
+one:
+  log_type: MyString
+  message: MyString
+  controller: MyString
+  action: MyString
+  params: MyText
+  session: MyText
+  user_id: 1
+
+two:
+  log_type: MyString
+  message: MyString
+  controller: MyString
+  action: MyString
+  params: MyText
+  session: MyText
+  user_id: 1
