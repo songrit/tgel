@@ -144,10 +144,9 @@ class EngineController < ApplicationController
   end
   def run_redirect
     init_vars(params[:id])
-    # post redirect_queue
-#    RedirectQueue.create :runseq_id=> @runseq.id,
-#      :url=>@runseq.name, :status=>'I', :user_id=>session[:user].id
-    end_action
+    next_runseq= @xmain.runseqs.first :conditions=>["action!='redirect' AND code= ?",@runseq.code]
+    next_runseq= @xmain.runseqs.find :first, :conditions=>"step=#{@xvars[:current_step]+1}" unless next_runseq
+    end_action(next_runseq)
   end
   def document
     #doc = Doc.find(params[:id])

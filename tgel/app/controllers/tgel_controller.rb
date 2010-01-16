@@ -2,7 +2,8 @@ class TgelController < ActionController::Base
 #  require "tgel"
 #  include TgelMethods
   layout "application"
-
+  helper :all # include all helpers, all the time
+  
   def view_mm
     Dir["*.mm"].each do |f|
       FileUtils.copy(f, "public/#{f}")
@@ -20,6 +21,17 @@ class TgelController < ActionController::Base
     @t << "Application Updated, please restart Rails server"
     ActionController::Routing::Routes.reload
   end
+  def process_report
+    @xmains= TgelXmain.all :conditions=>['status=? or status=?', 'R', 'I']
+  end
+  def status
+    @xmain= TgelXmain.find params[:id]
+    flash.now[:notice]= "รายการ #{@xmain.id} ได้ถูกยกเลิกแล้ว" if @xmain.status=='X'
+  rescue
+    flash[:notice]= "ขออภัย ไม่สามารถค้นหาสถานะการดำเนินงานรหัส <b> #{params[:id]} </b>ได้ กรุณาตรวจสอบอีกครั้ง"
+    redirect_to_root
+  end
+
   private
   def gen_views
     doc= get_app
@@ -135,6 +147,8 @@ class TgelController < ActionController::Base
           t << "rm app/views/layouts/#{model_code.pluralize}.html.erb"
           exec_cmd "rm app/views/layouts/#{model_code.pluralize}.html.erb"
         end
+      else
+        t << "-- skip because model already exists"
       end
     end
     t.join("<br/>")

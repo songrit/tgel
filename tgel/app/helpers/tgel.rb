@@ -1,4 +1,28 @@
 module TgelMethods
+  def status_icon(runseq)
+    case runseq.status
+    when "F"
+      image_tag "tick.png"
+    when "R"
+      image_tag "user.png"
+    when "I"
+      image_tag "dot.gif"
+    end
+  end
+  def login?
+    session[:user_id] && session[:user_id]!=1
+  end
+  def sha1(s)
+    Digest::SHA1.hexdigest(s)
+  end
+  def http(href)
+    require 'open-uri'
+    if PROXY
+      open(href, :proxy=>PROXY).read
+    else
+      open(href).read
+    end
+  end
   def non_fork?(s)
 #    %w(call ws redirect invoke).include? s
     return false
@@ -109,9 +133,15 @@ module TgelMethods
     role= TgelRole.find_by_code(code)
     return role ? role.name : ""
   end
-  def authorize? # use in pending tasks
-    @runseq= @xmain.tgel_runseqs.find(:first, :order=>'step', :conditions=>"status != 'F'")
+  def authorize?(start_runseq=nil) # use in pending tasks
+#    if start_runseq
+#      @runseq= start_runseq
+#    else
+#      @runseq= @xmain.tgel_runseqs.find(:first, :order=>'step', :conditions=>"status != 'F' AND id>=#{@xmain.current_runseq}")
+      @runseq= @xmain.tgel_runseqs.find(:first, :order=>'step', :conditions=>"status != 'F'")
+#    end
     return false unless @runseq
+    $xmain= @xmain ; $runseq = @runseq ; $user = current_user
     return false unless eval(@runseq.rule) if @runseq.rule
     return true unless fork_action?(@runseq.action)
     return true if @runseq.role.blank? && !check_wait
@@ -119,7 +149,9 @@ module TgelMethods
     return false unless user
 #    return false if user.role.blank?
     has_role = user.role.upcase.split(',').include?(@runseq.role.upcase) && !check_wait
-#    has_role = user.role.upcase.split(',').include?(@runseq.role.upcase)
+    return true if has_role
+    @xmain.current_runseq= @runseq.id unless has_role
+    #    has_role = user.role.upcase.split(',').include?(@runseq.role.upcase)
     until @runseq && (has_role || !affirm(get_option("fork")))
       break unless @runseq
       step= @runseq.step
@@ -234,7 +266,7 @@ module TgelMethods
   def xml_text(s)
     html_escape(s).gsub("\n","<br/>")
   end
-  def get_app
+  def index_mm
     findex= "#{RAILS_ROOT}/index.mm"
     fmain= "#{RAILS_ROOT}/main.mm"
     if File.exists?(findex)
@@ -244,6 +276,28 @@ module TgelMethods
     else
       return nil
     end
+  end
+  # use in view_mm.rhtml
+  def tgel_root
+    findex= "#{RAILS_ROOT}/index.mm"
+    fmain= "#{RAILS_ROOT}/main.mm"
+    if File.exists?(findex)
+      return "index.mm"
+    else
+      return "main.mm"
+    end
+  end
+  def get_app
+    f= index_mm
+#    findex= "#{RAILS_ROOT}/index.mm"
+#    fmain= "#{RAILS_ROOT}/main.mm"
+#    if File.exists?(findex)
+#      f= findex
+#    elsif File.exists?(fmain)
+#      f= fmain
+#    else
+#      return nil
+#    end
     #f= "#{RAILS_ROOT}/main.mm"
     t= REXML::Document.new(File.read(f).gsub("\n","")).root
     recheck= true ; first_pass= true
@@ -305,8 +359,8 @@ module TgelMethods
     TgelService.first :conditions=>["module= ? AND code= ?", m,c]
   end
   def get_user
-    return nil unless session
-    return session[:user_id] ? TgelUser.find(session[:user_id]) : nil
+    return TgelUser.find_by_login("anonymous") unless session
+    return session[:user_id] ? TgelUser.find(session[:user_id]) : TgelUser.find_by_login("anonymous")
   end
 
   alias_method(:current_user, :get_user)
@@ -414,7 +468,8 @@ module TgelMethods
     cd.iconv(t)
   end
   def utf8(t)
-    cd = Iconv.new("UTF-8", "TIS-620")
+    #cd = Iconv.new("UTF-8", "TIS-620")
+    cd = Iconv.new("UTF-8//IGNORE", "TIS-620")
     cd.iconv(t)
   end
   def set_songrit(k,v)

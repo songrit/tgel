@@ -28,11 +28,12 @@ class EngineController < ApplicationController
     init_vars(params[:id])
     #    @xmain= TgelXmain.find params[:id]
     #@runseq= TgelRunseq.find @xmain.current_runseq
+    @runseq = TgelRunseq.find params[:runseq] if params[:runseq]
     if non_fork?(@runseq.action)
       redirect_to(:action=>"run_#{@runseq.action}", :id=>@xmain) and return
     else
-      @runseq= @xmain.tgel_runseqs.find(:first, :order=>'step', :conditions=>"status!='F'")
-      if authorize?
+      @runseq= @xmain.tgel_runseqs.find(:first, :order=>'step', :conditions=>"status!='F' AND id>=#{@xmain.current_runseq}") unless params[:runseq]
+      if authorize?(@runseq)
           tgel_debug "run_#{@runseq.action}: xmain #{@xmain.id} #{@xmain.name}, runseq #{@runseq.id} #{@runseq.code}: #{@runseq.name}"
           redirect_to :action=>"run_#{@runseq.action}", :id=>@xmain and return
 #        end
@@ -287,11 +288,25 @@ class EngineController < ApplicationController
   end
   def run_redirect
     init_vars(params[:id])
-    # post redirect_queue
-#    RedirectQueue.create :tgel_runseq_id=> @runseq.id,
-#      :url=>@runseq.name, :status=>'I', :user_id=>session[:user].id
-      runseq= @xmain.tgel_runseqs.first :conditions=>['code=? AND id!=?', @runseq.code, @runseq.id]
-    end_action runseq
+    next_runseq= @xmain.tgel_runseqs.first :conditions=>["action!='redirect' AND code= ?",@runseq.code]
+#    next_runseq= @xmain.tgel_runseqs.find :first, :conditions=>"step=#{@xvars[:current_step]+1}" unless next_runseq
+    if next_runseq.step < @runseq.step
+      # mark runseq and all subsequence to be 'R' if 'F'
+      @xmain.tgel_runseqs.all(:conditions=>["step >= ?", next_runseq.step]).each do |runseq|
+        next unless runseq.status=='F'
+        runseq.status= 'R'
+        runseq.save
+      end
+    else
+      # mark all skip runseqs to be 'F'
+      @xmain.tgel_runseqs.all(:conditions=>["step < ?", next_runseq.step]).each do |runseq|
+        next if runseq.status=='F'
+        runseq.status= 'F'
+        runseq.save
+      end
+    end
+    @xmain.current_runseq= next_runseq.id
+    end_action(next_runseq)
   end
   def document
     #doc = Doc.find(params[:id])
@@ -412,7 +427,7 @@ class EngineController < ApplicationController
     if params.respond_to? :original_filename
       doc = TgelDoc.create(
         :name=> key.to_s, :tgel_user_id=>current_user.id,
-        :xmain_id=> @xmain.id,
+        :tgel_xmain_id=> @xmain.id,
         :tgel_runseq_id=> @runseq.id,
         :filename=> params.original_filename,
         :content_type => params.content_type || 'application/zip',
@@ -437,29 +452,13 @@ class EngineController < ApplicationController
       @xmain.save
       redirect_to_root and return
     end
-#    unless params[:action]=='run_call'
-#      @runseq.status= 'F' #finish
-#      @runseq.tgel_user_id= session[:user_id]
-#      @runseq.stop= Time.now
-#      @runseq.save
-#    end
-    # fork
     if fork_action?(next_runseq.action)
-#      next_runseq= @xmain.tgel_runseqs.find(:first, :order=>'step', :conditions=>"status != 'F'")
-      # if not authorize and fork then get next step
-#      has_role = current_user.role.upcase.split(',').include?(next_runseq.role.upcase) || non_fork?(next_runseq.action)
-#      until has_role or !affirm(get_option("fork", next_runseq)) or !next_runseq
-#        step= next_runseq.step
-#        next_runseq= @xmain.tgel_runseqs.find_by_step step+1
-#        #      next if @runseq.status=='F'
-#        has_role = next_runseq.role.blank? || current_user.role.upcase.split(',').include?(next_runseq.role.upcase)
-#      end
-      has_role= authorize?
+      has_role= authorize?(next_runseq)
     end
     if has_role
       @xmain.current_runseq= @runseq.id
       @xmain.save
-      redirect_to :action=>'run', :id=>@xmain and return
+      redirect_to :action=>'run', :id=>@xmain.id, :runseq=>@runseq.id and return
     else
       redirect_to_root and return
     end

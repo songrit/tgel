@@ -1,6 +1,9 @@
 .head
-  %title= @xmain.name
+  #title= "รหัสดำเนินการ #{@xmain.id}: #{@xmain.name}"
+  #subtitle= @runseq.name
   =javascript_include_tag "disable_enter_key"
+%script
+  function validate() { return true; }
 = step(@runseq.form_step, @xvars[:total_form_steps])
 %p
 - user = current_user || TgelUser.new
@@ -12,7 +15,7 @@
   - form_class = ''
   - next_step = 'end_form'
 /- form_tag({ :action => 'end_form' } , {:multipart => true, :onsubmit=>'return checkform(this);', :onKeyPress=>'return disableEnterKey(event)'}) do
-- form_tag({ :action => next_step } , {:multipart => true, :onKeyPress=>'return disableEnterKey(event)', :class=>form_class}) do
+- form_tag({ :action => next_step } , {:multipart => true, :onKeyPress=>'return disableEnterKey(event)', :onSubmit=>'return validate()', :class=>form_class}) do
   = hidden_field_tag 'xmain_id', @xmain.id
   = hidden_field_tag 'runseq_id', @runseq.id
   = hidden_field_tag 'step', @xvars[:current_step]
