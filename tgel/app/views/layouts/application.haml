@@ -1,0 +1,50 @@
+!!! strict
+%html{:xmlns => "http://www.w3.org/1999/xhtml"}
+  %head
+    %title TGEL
+    %meta{ :content => "text/html; charset=utf-8", "http-equiv" => "content-type" }
+    = stylesheet_link_tag "application", "balloontip"
+    = javascript_include_tag :defaults
+    = javascript_include_tag "flashobject", "balloontip"
+    = javascript_include_tag "nas_capicom"
+  %body{:onLoad=>"giveFocus();"}
+    #main
+      #barmain
+      %script
+        = "var barmain = new FlashObject('#{file_asset_id('images/mict_header.swf')}', 'barmain', '1000', '191', 6, '#27993A');"
+        barmain.write("barmain")
+      %ul#navigation
+        %li#home
+          = link_to "Home", root_path
+        %li#command
+          = link_to "command"
+        %li#command
+          = link_to "command"
+        %li#command
+          = link_to "command"
+        %li#command
+          = link_to "command"
+        %li#command
+          = link_to "command"
+        %li#command
+          = link_to "command"
+      %table#content
+        %tr
+          %td#command
+            /= render :partial=>"layouts/login"
+            #menu
+              %b ระบบ
+              %ul
+                /- service= get_service "employee/payment"
+                /- if service.authorized_task?(current_user)
+                /%li= link_to "lab/plant", "/run/lab/plant", :confirm=>"ยืนยันการสร้างงานใหม่"
+                %li= link_to "task 1", "#", :confirm=>"ยืนยันการสร้างงานใหม่"
+              %b ส่วนของผู้ดูแลระบบ
+              %ul
+                %li= link_to "Update App", {:controller=>"tgel", :action=>"update_app"}, :confirm=>"ยืนยัน"
+                %li= link_view_mm "Mind Map"
+          %td#app
+            #search_result
+            - if flash[:notice]
+              .notice= flash[:notice]
+            = yield

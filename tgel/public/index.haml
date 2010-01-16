@@ -1,0 +1,32 @@
+- @xmains= TgelXmain.all :conditions=>"status='R' or status='I' ", :order=>"created_at"
+
+.label
+  = image_tag "cog.png"
+  งานที่อยู่ระหว่างดำเนินการ
+%table{:width=>"100%"}
+  %tr{:style=>"color:white; background-color:#6A6A6A;"}
+    %th เลขที่
+    %th งาน
+    %th ขั้นตอน
+    %th ผู้ยื่นคำร้อง
+    %th เริ่มต้น
+    %th ยกเลิก
+  - @xmains.each do |xmain|
+    /- debugger
+    - next unless xmain.current_runseq
+    - @xmain= xmain
+    / current_runseq does not work with fork
+    /- @runseq= xmain.tgel_runseqs.find(xmain.current_runseq)
+    - @runseq= xmain.tgel_runseqs.find(:first, :order=>'step', :conditions=>"status != 'F'")
+    - next unless @runseq
+    - next unless @runseq.action=='form'
+    - next unless authorize?
+    /- next if check_wait
+    /- next unless authorize_rule?
+    %tr
+      %td= link_to xmain.id, "/engine/run/#{xmain.id}"
+      %td= xmain.name
+      %td= @runseq.name
+      %td{:align=>'center'}= "#{xmain.tgel_user.fname} #{xmain.tgel_user.lname}"
+      %td= date_thai xmain.start
+      %td= link_to image_tag("delete.png"), "/engine/cancel/#{xmain.id}", :confirm=>"โปรดยืนยันการยกเลิกรายการ"

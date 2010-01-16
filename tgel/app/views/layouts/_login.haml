@@ -1,0 +1,17 @@
+- unless session[:user_id]
+  - form_tag :controller=>"users", :action=>"login" do
+    %table#login
+      %tr
+        %td ชื่อผู้ใช้:
+        %td= text_field_tag :login, nil, :size=>7
+      %tr
+        %td รหัสผ่าน:
+        %td
+          = password_field_tag :password, nil, :size=>7
+          = image_submit_tag "play.gif", :alt=>"login", :title=>"เข้าใช้ระบบ"
+- else
+  #user{:style=>'background-color:#2381D2; color: white; width:200px;'}
+    - user= TgelUser.find(session[:user_id])
+    = "#{user.fname} #{user.lname}"
+    /%span{:style=>'float:right'}= link_to image_tag("exclamation.png", :alt=>"sign off", :title=>"ออกจากระบบ"), :controller=>"users", :action=>"logout"
+    %span{:style=>'float:right'}= link_to "ออกจากระบบ", :controller=>"users", :action=>"logout"
