@@ -1,4 +1,13 @@
 module TgelMethods
+  require "rexml/document"
+
+  def get_user
+    return TgelUser.find_by_login("anonymous") unless session[:user_id]
+    TgelUser.find(session[:user_id])
+  end
+
+  alias_method(:current_user, :get_user)
+
   def status_icon(runseq)
     case runseq.status
     when "F"
@@ -8,6 +17,10 @@ module TgelMethods
     when "I"
       image_tag "dot.gif"
     end
+  end
+  def admin?
+    role= current_user ? current_user.role : ""
+    role.upcase.split(",").include?("A")
   end
   def login?
     session[:user_id] && session[:user_id]!=1
@@ -358,12 +371,6 @@ module TgelMethods
     m,c= s.split("/")
     TgelService.first :conditions=>["module= ? AND code= ?", m,c]
   end
-  def get_user
-    return TgelUser.find_by_login("anonymous") unless session
-    return session[:user_id] ? TgelUser.find(session[:user_id]) : TgelUser.find_by_login("anonymous")
-  end
-
-  alias_method(:current_user, :get_user)
 
   def name2code(s)
     # rather not ignore # symbol cause it could be comment

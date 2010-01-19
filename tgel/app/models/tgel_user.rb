@@ -10,6 +10,9 @@ class TgelUser < ActiveRecord::Base
   def password=(pwd)
     write_attribute "password", TgelUser.sha1(pwd)
   end
+  def full_name
+    "#{title}#{fname} #{lname}"
+  end
 
   protected
   def self.sha1(s)

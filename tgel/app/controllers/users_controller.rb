@@ -20,6 +20,7 @@ class UsersController < ApplicationController
     redirect_to_root
   end
   def new
+    @title= "ขึ้นทะเบียนผู้ใช้"
     @user= TgelUser.new
   end
   def create

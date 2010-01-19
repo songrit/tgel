@@ -2,6 +2,4 @@
 module ApplicationHelper
   require "tgel"
   include TgelMethods
-  require "fusion_charts_helper"
-  include FusionChartsHelper
 end

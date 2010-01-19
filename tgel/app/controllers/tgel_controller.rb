@@ -8,6 +8,7 @@ class TgelController < ActionController::Base
     Dir["*.mm"].each do |f|
       FileUtils.copy(f, "public/#{f}")
     end
+    @title= "Mind Map"
   end
   def update_app
     @t = [cancel_pending_xmains]
@@ -75,7 +76,7 @@ class TgelController < ActionController::Base
     modules.each do |m|
       next if controller_exists?(m.module)
       t << "= #{m.module}"
-      t << exec_cmd("ruby script/generate controller #{m.module}")
+      t << exec_cmd("ruby script/generate rspec_controller #{m.module}")
       #add_tgel_to_controller(m.module)
     end
     t.join("<br/>")
@@ -137,8 +138,8 @@ class TgelController < ActionController::Base
       model_code= name2code(model_name)
       unless model_exists?(model_code)
         attr_list= make_fields(model)+" tgel_user_id:integer"
-        t << "ruby script/generate scaffold #{model_code} #{attr_list} --force<br/>"
-        t << exec_cmd("ruby script/generate scaffold #{model_code} #{attr_list} --force").gsub("\n","<br/>")
+        t << "ruby script/generate rspec_model #{model_code} #{attr_list} --force<br/>"
+        t << exec_cmd("ruby script/generate rspec_model #{model_code} #{attr_list} --force").gsub("\n","<br/>")
         # remove custom layout therefore all controller will default to application.rhtml layout
         if win32?
           t << "del app\\views\\layouts\\#{model_code.pluralize}.html.erb"
