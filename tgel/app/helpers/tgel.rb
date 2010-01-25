@@ -20,7 +20,7 @@ module TgelMethods
   end
   def admin?
     role= current_user ? current_user.role : ""
-    role.upcase.split(",").include?("A")
+    role.upcase.split(",").include?("A") rescue false
   end
   def login?
     session[:user_id] && session[:user_id]!=1
