@@ -73,6 +73,7 @@ class EngineController < ApplicationController
   end
   def run_form
     init_vars(params[:id])
+    @title= "รหัสดำเนินการ #{@xmain.id}: #{@xmain.name}"
     service= @xmain.tgel_service
     if service
       f= "app/views/#{service.module}/#{service.code}/#{@runseq.code}.rhtml"
@@ -129,10 +130,22 @@ class EngineController < ApplicationController
     init_vars(params[:xmain_id])
     end_action
   end
+#  def end_form
+#    init_vars(params[:xmain_id])
+#    eval "@xvars[:#{@runseq.code}] = params"
+#    params.each { |k,v| get_image(k, params[k]) }
+#    end_action
+#  end
   def end_form
     init_vars(params[:xmain_id])
-    eval "@xvars[:#{@runseq.code}] = params"
-    params.each { |k,v| get_image(k, params[k]) }
+    eval "@xvars[:#{@runseq.code}] = {} unless @xvars[:#{@runseq.code}]"
+    params.each { |k,v|
+      if params[k].respond_to? :original_filename
+        get_image(k, params[k])
+      else
+        eval "@xvars[:#{@runseq.code}][:#{k}] = v"
+      end
+    }
     end_action
   end
   def run_output
@@ -247,9 +260,11 @@ class EngineController < ApplicationController
         if condition==match
           next_runseq= @xmain.tgel_runseqs.first :conditions=>['code=?',label]
           match_found= true
+          @runseq_not_f= false
           # mark runseq and all subsequence to be 'R' if 'F'
           @xmain.tgel_runseqs.all(:conditions=>["step >= ?", next_runseq.step]).each do |runseq|
             runseq.status= 'R' if runseq.status=='F'
+            @runseq_not_f= true if runseq.id==@runseq.id
             runseq.save
           end
         end
@@ -316,7 +331,8 @@ class EngineController < ApplicationController
       if %w(output temp).include?(doc.content_type)
         render :text=>doc.data_text
       else
-        send_data(doc.data, :filename=>doc.filename, :type=>doc.content_type, :disposition=>"attachment")
+        data= read_binary("doc/f#{params[:id]}")
+        send_data(data, :filename=>doc.filename, :type=>doc.content_type, :disposition=>"attachment")
       end
     else
       data= read_binary("public/images/img_not_found.png")
@@ -332,16 +348,6 @@ class EngineController < ApplicationController
   def read_binary(path)
     File.open path, "rb" do |f| f.read end
   end
-#  def document
-#    #doc = Doc.find(params[:id])
-#    doc = TgelDoc.first :conditions=>"id = #{params[:id]}"
-#    if doc
-#      send_data(doc.data, :filename=>doc.filename, :type=>doc.content_type, :disposition=>"attachment")
-#    else
-#      data= read_binary("public/images/img_not_found.png")
-#      send_data(data, :filename=>"img_not_found.png", :type=>"image/png", :disposition=>"attachment")
-#    end
-#  end
 
   private
   def create_xmain(service)
@@ -424,20 +430,22 @@ class EngineController < ApplicationController
     @runseq.save
   end
   def get_image(key, params)
-    if params.respond_to? :original_filename
-      doc = TgelDoc.create(
-        :name=> key.to_s, :tgel_user_id=>current_user.id,
-        :tgel_xmain_id=> @xmain.id,
-        :tgel_runseq_id=> @runseq.id,
-        :filename=> params.original_filename,
-        :content_type => params.content_type || 'application/zip',
-        :data=> params.read)
-      eval "@xvars[:#{@runseq.code}][:#{key}] = '#{url_for(:action=>'document', :id=>doc.id)}' "
-      eval "@xvars[:#{@runseq.code}][:#{key}_doc_id] = #{doc.id} "
-    end
+    doc = TgelDoc.create(
+      :name=> key.to_s, :tgel_user_id=>current_user.id,
+      :tgel_xmain_id=> @xmain.id,
+      :tgel_runseq_id=> @runseq.id,
+      :filename=> params.original_filename,
+      :content_type => params.content_type || 'application/zip'
+      #        :data=> params.read)
+    )
+    File.open("doc/f#{doc.id}","wb") { |f|
+      f.puts(params.read)
+    }
+    eval "@xvars[:#{@runseq.code}][:#{key}] = '#{url_for(:action=>'document', :id=>doc.id)}' "
+    eval "@xvars[:#{@runseq.code}][:#{key}_doc_id] = #{doc.id} "
   end
   def end_action(next_runseq = nil)
-    @runseq.status='F'
+    @runseq.status='F' unless @runseq_not_f
     @runseq.tgel_user_id= session[:user_id]
     @runseq.stop= Time.now
     @runseq.save

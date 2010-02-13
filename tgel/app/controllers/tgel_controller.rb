@@ -11,6 +11,7 @@ class TgelController < ActionController::Base
     @title= "Mind Map"
   end
   def update_app
+    @title= "Update Application from Mindmap"
     @t = [cancel_pending_xmains]
     @t << process_roles
     @t << "if you change models in freemind, please destroy scaffold and tables before update app"
